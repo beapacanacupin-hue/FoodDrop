@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Food Drop Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f0f0f0;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
+
+    #gameCanvas {
+      position: relative;
+      width: 800px;
+      height: 500px;
+      background-color: #cdeac0; 
+      margin: 20px auto;
+      border: 3px solid #333;
+      overflow: hidden;
+      outline: none;
+    }
+
+    .player {
+      position: absolute;
+      bottom: 10px;
+      width: 100px;
+      height: 80px;
+      background-image: url('Dog.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .item {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      top: 0px;
+      border-radius: 20px;
+    }
+
+    .food {
+      background-color: #D2691E;
+      background-image: url('food.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .bad {
+      background-color: #7B3F00;
+      background-image: url('chocolate.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    #score {
+      text-align: center;
+      font-size: 24px;
+      margin: 10px;
+    }
+
+    #lives {
+      text-align: center;
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      width: 100%;
+      text-align: center;
+      font-size: 30px;
+      color: red;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <div id="lives">Lives: ❤️❤️❤️</div>
+  <div id="gameCanvas" tabindex="0">
+    <div class="player" id="player"></div>
+    <div id="gameOver">Game Over<br><small>Press SPACE to play again</small></div>
+  </div>
+
+  <script>
+    const player = document.getElementById("player");
+    const gameCanvas = document.getElementById("gameCanvas");
+    const scoreDisplay = document.getElementById("score");
+    const livesDisplay = document.getElementById("lives");
+    const gameOverText = document.getElementById("gameOver");
+
+    const playerSpeed = 20;
+    const playerWidth = 100;
+    const canvasWidth = 800;
+
+    let score = 0;
+    let lives = 3;
+    let gameRunning = true;
+    let playerX = (canvasWidth - playerWidth) / 2;
+    player.style.left = playerX + "px";
+
+    window.onload = () => {
+      gameCanvas.focus();
+    };
+
+    let itemIntervals = [];
+
+    function handleKeyDown(e) {
+      if (!gameRunning && e.key === " ") {
+        restartGame();
+        return;
+      }
+
+      if (!gameRunning) return;
+
+      if (e.key === "ArrowLeft" && playerX > 0) {
+        playerX -= playerSpeed;
+        if (playerX < 0) playerX = 0;
+      } else if (e.key === "ArrowRight" && playerX < canvasWidth - playerWidth) {
+        playerX += playerSpeed;
+        if (playerX > canvasWidth - playerWidth) playerX = canvasWidth - playerWidth;
+      }
+      player.style.left = playerX + "px";
+    }
+
+    gameCanvas.addEventListener("keydown", handleKeyDown);
+
+    function updateLives() {
+      livesDisplay.innerHTML = `Lives: ${"❤️".repeat(lives)}`;
+    }
+
+    function createItem() {
+      const item = document.createElement("div");
+      const isBad = Math.random() < 0.2;
+      item.classList.add("item", isBad ? "bad" : "food");
+      item.style.left = Math.floor(Math.random() * (canvasWidth - 40)) + "px";
+      gameCanvas.appendChild(item);
+
+      let top = 0;
+      const fallInterval = setInterval(() => {
+        if (!gameRunning) {
+          clearInterval(fallInterval);
+          item.remove();
+          return;
+        }
+
+        top += 5;
+        item.style.top = top + "px";
+
+        const itemRect = item.getBoundingClientRect();
+        const playerRect = player.getBoundingClientRect();
+
+        if (
+          itemRect.bottom > playerRect.top &&
+          itemRect.left < playerRect.right &&
+          itemRect.right > playerRect.left &&
+          itemRect.top < playerRect.bottom
+        ) {
+          if (item.classList.contains("bad")) {
+            lives--;
+            updateLives();
+            if (lives <= 0) {
+              gameOver();
+            }
+          } else {
+            score++;
+            scoreDisplay.textContent = "Score: " + score;
+          }
+          clearInterval(fallInterval);
+          item.remove();
+        }
+
+        if (top > gameCanvas.clientHeight) {
+          clearInterval(fallInterval);
+          item.remove();
+        }
+      }, 30);
+
+      itemIntervals.push(fallInterval);
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      gameOverText.style.display = "block";
+    }
+
+    function startGame() {
+      const spawner = setInterval(() => {
+        if (gameRunning) createItem();
+      }, 800);
+      itemIntervals.push(spawner);
+    }
+
+    function restartGame() {
+      
+      score = 0;
+      lives = 3;
+      gameRunning = true;
+      playerX = (canvasWidth - playerWidth) / 2;
+      player.style.left = playerX + "px";
+      scoreDisplay.textContent = "Score: 0";
+      updateLives();
+      gameOverText.style.display = "none";
+
+      itemIntervals.forEach(clearInterval);
+      itemIntervals = [];
+
+      const items = document.querySelectorAll(".item");
+      items.forEach(item => item.remove());
+
+      startGame();
+    }
+
+    updateLives();
+    startGame();
+  </script>
+</body>
+</html>
